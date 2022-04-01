@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todoapp-deployment
+  labels:
+    app: todoapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todoapp
+  template:
+    metadata:
+      labels:
+        app: todoapp
+    spec:
+      containers:
+        - name: todoapp
+          image: todo-api-image-minikube:1.0
+          ports:
+            - containerPort: 8001
+#          env:
+#            - name: DB_URL
+#              valueFrom:
+#                configMapKeyRef:
+#                  name: mongo-config
+#                  key: mongo-url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todoapp-service
+spec:
+  type: NodePort
+  selector:
+    app: todoapp
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+      nodePort: 30001

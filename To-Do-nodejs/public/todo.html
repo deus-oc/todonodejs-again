@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <title>Todo App</title>
+</head>
+<style>
+    body {
+        background: #fff;
+        color: #333;
+        font-family: Lato, sans-serif;
+    }
+
+    .container {
+        display: block;
+        width: 800px;
+        margin: 100px auto 0;
+    }
+
+    .big-button {
+        background-color: #4CAF50; /* Green */
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        float: right;
+    }
+
+    li {
+        padding: 15px 32px;
+        margin: 3px;
+        list-style-type: none;
+    }
+
+
+    .edit-button {
+        background-color: #abaf4c; /* Dark moderate yellow  */
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        float: right;
+    }
+
+    .delete-button {
+        background-color: #af504c; /* Red */
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        float: right;
+    }
+
+    .check-button {
+        margin: 7px;
+    }
+
+    .add-p {
+        width: 100%;
+        padding: 10px;
+        margin: 20px;
+    }
+
+    input[type=text] {
+        width: 100%;
+        padding: 12px 20px;
+        margin: 8px 0;
+        display: inline-block;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+    }
+
+</style>
+<body>
+<button class="big-button" onclick="logout()"> Logout</button>
+<button class="delete-button" onclick="deleteAll()"> Delete All</button>
+<h3 id="user-email"></h3>
+<div class="container">
+    <p class="add-p">
+        <h3> Add Item </h3>
+        <label for="add-input"></label><input id="add-input" type="text">
+        <button class="big-button" id="add-button" type="submit">Add</button>
+    </p>
+    <h3> TODO </h3>
+    <ul>
+
+    </ul>
+
+</div>
+<script>
+    const myStorage = window.localStorage;
+    const token = myStorage.getItem("token");
+    const refreshToken = myStorage.getItem("refreshToken");
+    const email = myStorage.getItem("email");
+    const userEmail = document.getElementById("user-email");
+    const node = document.createTextNode(`Hi ${email}`);
+    userEmail.appendChild(node);
+    // axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    axios.interceptors.request.use(function (config) {
+        config.headers.Authorization = `Bearer ${myStorage.getItem("token")}`;
+        return config;
+    })
+    axios.interceptors.response.use(
+        (response) => {
+            // Do something with response data
+            return response;
+        }, async (error) => {
+            // Do something with response error
+            if (error.response.data.err === "Invalid Token") {
+                const responseObj = await axios.post('/verify', {email: email, refreshToken: refreshToken});
+                myStorage.setItem('token', responseObj.data.data.token);
+                error.config.headers['Authorization'] = 'Bearer ' + responseObj.data.data.token;
+                error.config.baseURL = undefined;
+                return axios.request(error.config);
+            } else if (error.response.data.err === "Invalid refresh token") {
+                logout();
+            }
+            return Promise.reject(error);
+        });
+
+    function logout() {
+        myStorage.removeItem("email");
+        myStorage.removeItem("token");
+        myStorage.removeItem("refreshToken");
+        window.location.href = "index.html";
+    }
+
+    async function editClick(id, content) {
+        let newEditContent = prompt(`Current Content: ${content}, Edit this`);
+        if (newEditContent !== null && newEditContent.length !== 0 && newEditContent !== content) {
+            try {
+                const data = await axios.patch(`/note/edit/${id}`, {"content": newEditContent});
+                if (!data.data.success) {
+                    console.error("inside try", data.data.err)
+                }
+                document.getElementById("input-" + id).textContent = newEditContent;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    }
+
+    async function deleteClick(id) {
+        await axios.delete(`/note/delete/${id}`);
+        document.getElementById("li-" + id).remove()
+    }
+
+    async function deleteAll() {
+        if (confirm("Delete All notes ?")) {
+            await axios.delete(`/note/delete`);
+            document.querySelector('ul').innerHTML = "";
+        }
+    }
+
+    async function add() {
+        const bodyContent = document.getElementById("add-input").value
+        if (bodyContent === "") {
+            return;
+        }
+        const body = await axios.post('/note/add', {"content": bodyContent});
+        const item = {
+            _id: body.data.data.id,
+            content: bodyContent,
+            isDone: false
+        };
+        const todoList = document.querySelector('ul');
+        todoList.appendChild(createTodoElement(item));
+    }
+
+    async function checkClick(id, isChecked) {
+        const textInput = document.getElementById("input-" + id);
+        let decorate = "none", isDone = false;
+        if (isChecked) {
+            decorate = "line-through";
+            isDone = true;
+        }
+        await axios.patch(`/note/edit/${id}`, {"isDone": isDone});
+        textInput.style.setProperty("text-decoration", decorate);
+    }
+
+    function createTodoElement(item) {
+        const todoElement = document.createElement('li');
+        todoElement.setAttribute("id", "li-" + item._id);
+
+        // const textInput = document.createElement("p");
+        // const textNode = document.createTextNode(item.content);
+        // textInput.appendChild(textNode);
+        const textInput = document.createElement("label");
+        textInput.innerText = item.content
+        textInput.setAttribute("id", "input-" + item._id);
+
+        const checkboxInput = document.createElement("input");
+        checkboxInput.setAttribute("type", "checkbox");
+        checkboxInput.setAttribute("id", "checkbox-" + item._id);
+        checkboxInput.setAttribute("class", "check-button");
+        if (item.isDone) {
+            checkboxInput.checked = true;
+            textInput.style.setProperty("text-decoration", "line-through");
+        }
+        checkboxInput.onclick = function () {
+            checkClick(item._id, document.getElementById("checkbox-" + item._id).checked);
+        }
+
+        const editButton = document.createElement("button");
+        editButton.innerHTML = "Edit";
+        editButton.setAttribute("id", "edit-" + item._id);
+        editButton.setAttribute("class", "edit-button");
+        editButton.onclick = function () {
+            editClick(item._id, document.getElementById("input-" + item._id).textContent);
+        }
+
+        const deleteButton = document.createElement("button");
+        deleteButton.innerHTML = "Delete";
+        deleteButton.setAttribute("id", "delete-" + item._id);
+        deleteButton.setAttribute("class", "delete-button")
+        deleteButton.onclick = function () {
+            deleteClick(item._id);
+        }
+
+        todoElement.appendChild(checkboxInput);
+        todoElement.appendChild(textInput);
+        todoElement.appendChild(editButton);
+        todoElement.appendChild(deleteButton);
+        return todoElement;
+    }
+
+
+    async function fetchNotes() {
+        const responseObj = await axios.get(`/note/get`);
+        const todoItems = responseObj.data.data;
+        const todoList = document.querySelector('ul');
+        todoItems.forEach((item) => {
+            todoList.appendChild(createTodoElement(item));
+        })
+    }
+
+    window.onload = fetchNotes
+    document.getElementById("add-button").addEventListener("click", add);
+</script>
+</body>
+</html>

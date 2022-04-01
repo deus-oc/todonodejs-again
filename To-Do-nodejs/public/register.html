@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <title>Todo App</title>
+</head>
+<style>
+
+    input[type=text], input[type=password] {
+        width: 100%;
+        padding: 12px 20px;
+        margin: 8px 0;
+        display: inline-block;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+    }
+
+    .big-button {
+        background-color: #4CAF50; /* Green */
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        float: right
+    }
+</style>
+<body>
+<header>
+    <button class="big-button" onclick="onLoginClick()">Login</button>
+    <h1> Register </h1>
+    <label for="email-input"> <b>Email</b></label><input id="email-input" placeholder="Enter Email" type="text">
+    <label for="password-input"> <b>Password</b></label><input id="password-input" placeholder="Enter Password"
+                                                               type="password">
+    <label for="re-password-input"><b> Re-Enter Password</b></label><input id="re-password-input"
+                                                                           placeholder="Re-Enter Password"
+                                                                           type="password">
+
+    <button class="big-button" onclick="saveInfo()">Enter</button>
+</header>
+<script>
+    function onLoginClick() {
+        window.location.href = "/index.html"
+    }
+
+    async function saveInfo() {
+        const email = document.getElementById("email-input").value.trimEnd();
+        const password = document.getElementById("password-input").value.trimEnd();
+        const rePassword = document.getElementById("re-password-input").value.trimEnd();
+        if (rePassword !== password) {
+            alert("Passwords dont match");
+            return;
+        }
+        try {
+            const res = await axios.post(`/register`, {"email": email, "password": password});
+            if (!res.data.success) {
+                alert(res.data.err);
+            } else {
+                window.location.href = "./index.html"
+            }
+        } catch (_) {
+            alert('Already Registered');
+        }
+    }
+</script>
+</body>
+</html>

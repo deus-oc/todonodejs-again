@@ -1,0 +1,44 @@
+#verison: "3.8"
+#services:
+#  todo-api:
+#    container_name: todo-app-instance-1
+#    #    restart: unless-stopped
+#    build: .
+#    #      context: .
+#    #      dockerfile: Dockerfile
+#    ports:
+#      - 8001:8001
+#  #    depends_on:
+#  #      - mongodb-service
+#  #    networks:
+#  #      - todo-app
+#  mongodb-service:
+#    image: mongo:4.0-xenial
+#    #    restart: unless-stopped
+#    ports:
+#      - 27017:27017
+#    volumes:
+#      - TodoList:/data/db
+##    networks:
+##      - todo-app
+#volumes:
+#  TodoList:
+##    driver: local
+##networks:
+##  todo-app:
+##    driver: bridge
+
+version: "3.8"
+services:
+  web:
+    build: .
+    ports:
+      - "8001:8001"
+  mongodb-service:
+    image: mongo:4.0-xenial
+    ports:
+      - "27017:27017"
+    volumes:
+      - todo-list:/data/db
+volumes:
+  todo-list:
